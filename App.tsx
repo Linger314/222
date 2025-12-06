@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateMechanismDiagram, ModelOption, VisualStyle } from './services/geminiService';
 import { CanvasEditor } from './components/CanvasEditor';
-import { Sparkles, Image as ImageIcon, Loader2, Settings2, Palette, Box, PenTool, Camera, Layout } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Loader2, Settings2, Palette, Box, PenTool, Camera, Layout, Key, ExternalLink } from 'lucide-react';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -10,6 +10,41 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelOption>('gemini-3-pro-image-preview');
   const [selectedStyle, setSelectedStyle] = useState<VisualStyle>('flat_vector');
+  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+
+  // Check for API Key selection on mount
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio) {
+        try {
+          const has = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(has);
+        } catch (e) {
+          console.error("Error checking API key:", e);
+          // If check fails, we assume no key to be safe, or allow fall through if configured differently
+          setHasApiKey(false); 
+        }
+      } else {
+        // If not running in AI Studio context, we assume the environment is configured manually
+        // (e.g., standard .env file development), so we bypass the check.
+        setHasApiKey(true);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      try {
+        await window.aistudio.openSelectKey();
+        // Assume success to mitigate race condition
+        setHasApiKey(true);
+      } catch (e) {
+        console.error("Error selecting key:", e);
+        setError("Failed to select API Key. Please try again.");
+      }
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -54,6 +89,38 @@ function App() {
       <div className="text-xs text-slate-500 mt-1 leading-tight">{description}</div>
     </button>
   );
+
+  // API Key Selection Screen
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white max-w-md w-full rounded-2xl shadow-xl border border-slate-200 p-8 text-center space-y-6">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-blue-600">
+            <Key size={32} />
+          </div>
+          <div>
+             <h1 className="text-2xl font-bold text-slate-900 mb-2">Connect Google AI</h1>
+             <p className="text-slate-600">
+               To generate professional scientific diagrams, please connect your Google Cloud Project with a valid API key.
+             </p>
+          </div>
+          
+          <button 
+            onClick={handleSelectKey}
+            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+          >
+            Select API Key
+          </button>
+
+          <div className="text-xs text-slate-400">
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors">
+              Pricing & Billing Information <ExternalLink size={10} />
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900 font-sans">

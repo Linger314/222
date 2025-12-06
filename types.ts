@@ -35,3 +35,10 @@ export interface EraserPath {
 export type EditorMode = 'view' | 'pan' | 'draw_eraser' | 'add_text' | 'move_item' | 'pick_color' | 'draw_shape';
 
 export type ShapeToolType = 'rectangle' | 'ellipse' | 'arrow';
+
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+}
